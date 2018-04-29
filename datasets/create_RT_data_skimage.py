@@ -12,10 +12,9 @@ from tqdm import tqdm
 
 import pdb
 
-DATA_DIR = '/scratch0/ilya/locDoc/data/siim-medical-images/337/'
-OUT_DIR = '/scratch0/ilya/locDoc/data/siim-medical-images/tmp/'
+DATA_DIR = '/scratch0/public/rsna-bone-age/512/train/'
+OUT_DIR = '/scratch0/public/rsna-bone-age/50_views/'
 NANG = 50
-IN_IMG_SIZE = 337
 
 ang = np.linspace(0., 180., NANG, endpoint=False)
 
