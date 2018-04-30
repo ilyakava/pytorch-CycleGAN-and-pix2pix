@@ -3,6 +3,7 @@ import numpy as np
 import scipy
 import scipy.misc
 from scipy.fftpack import fft, ifft, fftfreq
+from warnings import warn
 import pdb
 
 from skimage.io import imread
@@ -16,36 +17,21 @@ import torch.nn.functional as F
 dtype = torch.cuda.FloatTensor
 
 #torch.nn.functional.grid_sample(input, grid, mode='bilinear', padding_mode='zeros')
-def torch_iradon(radon_image, theta=None, output_size=None,
-           filter="ramp", interpolation="linear", circle=None):
-    if radon_image.ndim != 2:
-        raise ValueError('The input image must be 2-D')
-    if theta is None:
-        m, n = radon_image.shape
-        theta = np.linspace(0, 180, n, endpoint=False)
-    else:
-        theta = np.asarray(theta)
+def torch_iradon(radon_image, theta, output_size=None,
+           filter="ramp", circle=False):
+
+
     if len(theta) != radon_image.shape[1]:
         raise ValueError("The given ``theta`` does not match the number of "
                          "projections in ``radon_image``.")
-    interpolation_types = ('linear', 'nearest', 'cubic')
-    if interpolation not in interpolation_types:
-        raise ValueError("Unknown interpolation: %s" % interpolation)
+
     if not output_size:
+        warn('estimating output size')
         # If output size not specified, estimate from input radon image
-        if circle:
-            output_size = radon_image.shape[0]
-        else:
-            output_size = int(np.floor(np.sqrt((radon_image.shape[0]) ** 2
-                                               / 2.0)))
-    if circle is None:
-        warn('The default of `circle` in `skimage.transform.iradon` '
-             'will change to `True` in version 0.15.')
-        circle = False
-    if circle:
-        radon_image = _sinogram_circle_to_square(radon_image)
+        output_size = int(np.floor(np.sqrt((radon_image.shape[0]) ** 2 / 2.0)))
 
     th = (np.pi / 180.0) * theta
+
     # resize image to next power of two (but no less than 64) for
     # Fourier analysis; speeds up Fourier and lessens artifacts
     projection_size_padded = \
@@ -64,18 +50,41 @@ def torch_iradon(radon_image, theta=None, output_size=None,
 
     # Resize filtered image back to original size
     radon_filtered = radon_filtered[:radon_image.shape[0], :]
-    reconstructed = np.zeros((output_size, output_size))
-    # Determine the center of the projections (= center of sinogram)
-    mid_index = radon_image.shape[0] // 2
+    
+    ####################
 
+    preG = np.reshape(radon_filtered, (1,1)+radon_image.shape)
+    radon_imageG = autograd.Variable(torch.from_numpy(preG).type(dtype))
+
+    radon_image_paddedG = torch.cat([radon_imageG, radon_imageG, radon_imageG], dim=2)
+
+
+    mylist = (np.array(range(radon_image.shape[0])) - ((radon_image.shape[0] - 1) / 2)) / ((radon_image.shape[0] - 1) / 2)
+    fourier_filter = 1 - np.abs(mylist)
+
+    # f = fftfreq(radon_image.shape[0]).reshape(-1, 1)   # digital frequency
+    # omega = 2 * np.pi * f                                # angular frequency
+    # fourier_filter = 2 * np.abs(f)                       # ramp filter
+
+    time_filter = ifft(fourier_filter, axis=0).real # todo check why it doesn't output real in the first place
+    preG = np.reshape(time_filter, (1,1,len(time_filter),1))
+    hG = autograd.Variable(torch.from_numpy(preG).type(dtype))
+
+    radon_padded_filteredG = F.conv2d(radon_image_paddedG, hG)
+    radon_filteredG = radon_padded_filteredG[:,:,(radon_image.shape[0]):(radon_image.shape[0]*2),:]
+
+    radon_filtered_test = (radon_filteredG.data).cpu().numpy()
+
+
+    # pdb.set_trace()
     # #########################################
 
     [X, Y] = np.mgrid[0:output_size, 0:output_size]
     xpr = X - int(output_size) // 2
     ypr = Y - int(output_size) // 2
 
-    preG = np.reshape(radon_filtered, (1,1)+radon_filtered.shape)
-    radon_filteredG = autograd.Variable(torch.from_numpy(preG).type(dtype))
+    #preG = np.reshape(radon_filtered, (1,1)+radon_filtered.shape)
+    #radon_filteredG = autograd.Variable(torch.from_numpy(preG).type(dtype))
 
     preG = np.zeros((1,1, output_size, output_size))
     reconstructedG = autograd.Variable(torch.from_numpy(preG).type(dtype))
@@ -97,10 +106,7 @@ def torch_iradon(radon_image, theta=None, output_size=None,
         
         reconstructedG += backprojectedG
 
-    backprojected_test = np.reshape((reconstructedG.data).cpu().numpy(), ty.shape)
-    pdb.set_trace()
-    
-    np.sum(np.abs(backprojected - backprojected_test))
+    return reconstructedG * np.pi / (2 * len(th))
 
 if __name__ == '__main__':
     obj = imread('/scratch0/ilya/locDoc/data/siim-medical-images/337/ID_0004_AGE_0056_CONTRAST_1_CT.png', as_grey=True)
@@ -109,4 +115,11 @@ if __name__ == '__main__':
     ang = np.linspace(0., 180., 50, endpoint=False)
     proj = radon(obj, theta=ang, circle=False)
     # b 262
+    # projG = 
     rec = torch_iradon(proj, theta=ang, circle=False)
+    rec2 = iradon(proj, theta=ang, circle=False)
+    reconstructed = (rec.data).cpu().numpy() # and get rid of first two dimensions
+    plt.imshow(reconstructed[0,0,:,:], cmap='gray')
+    plt.show()
+    plt.imshow(rec2, cmap='gray')
+    pdb.set_trace()
