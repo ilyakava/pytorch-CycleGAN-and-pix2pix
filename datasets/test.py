@@ -57,7 +57,7 @@ def torch_iradon(radon_image, theta, output_size=None,
     # pdb.set_trace()
     ####################
 
-    preG = np.reshape(radon_image, (1,1)+radon_image.shape)
+    preG = np.reshape(img, (1,1)+img.shape)
     radon_imageG = autograd.Variable(torch.from_numpy(preG).type(dtype))
 
     radon_image_paddedG = torch.cat([radon_imageG, radon_imageG], dim=2)
@@ -66,22 +66,22 @@ def torch_iradon(radon_image, theta, output_size=None,
     mylist = (np.array(range(radon_image.shape[0])) - ((radon_image.shape[0] - 1) / 2)) / ((radon_image.shape[0] - 1) / 2)
     fourier_filter = 1 - np.abs(mylist)
 
-    time_filter = (irfft(fourier_filter, axis=0).real) # np.fft.fftshift
-    time_filter2 = time_filter.tolist()
-    time_filter2.reverse()
-    time_filter2 = np.array(time_filter2)
+    time_filter = (irfft(fourier_filter, axis=0).real)  # np.fft.fftshift
+    # time_filter2 = time_filter.tolist()
+    # time_filter2.reverse()
+    # time_filter2 = np.array(time_filter2)
     #time_filter_padded = np.concatenate([time_filter, np.zeros((len(time_filter)-1))])
     preG = np.reshape(time_filter, (1,1,len(time_filter),1))
     hG = autograd.Variable(torch.from_numpy(preG).type(dtype))
 
     radon_padded_filteredG = F.conv2d(radon_image_paddedG, hG)
-    radon_filteredG = radon_padded_filteredG[:,:,:-1,:]
+    radon_filteredG = radon_padded_filteredG[:,:,:radon_image.shape[0],:]
 
     radon_padded_filtered_test = (radon_padded_filteredG.data).cpu().numpy()
     radon_filtered_test = (radon_filteredG.data).cpu().numpy()
 
-
     # pdb.set_trace()
+
     # #########################################
 
     [X, Y] = np.mgrid[0:output_size, 0:output_size]
@@ -131,3 +131,5 @@ if __name__ == '__main__':
     plt.imshow(rec2, cmap='gray')
     plt.show()
     pdb.set_trace()
+    # rec4 = (rec3-np.min(rec3))/(np.max(rec3)-np.min(rec3)) * 255.0
+
