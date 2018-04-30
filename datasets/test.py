@@ -2,9 +2,11 @@ from skimage.transform import radon, rescale, iradon
 import numpy as np
 import scipy
 import scipy.misc
-from scipy.fftpack import fft, ifft, fftfreq
+from scipy.fftpack import fft, ifft, fftfreq, rfft, irfft
 from warnings import warn
 import pdb
+
+from PIL import Image
 
 from skimage.io import imread
 import matplotlib.pyplot as plt
@@ -34,8 +36,7 @@ def torch_iradon(radon_image, theta, output_size=None,
 
     # resize image to next power of two (but no less than 64) for
     # Fourier analysis; speeds up Fourier and lessens artifacts
-    projection_size_padded = \
-        max(64, int(2 ** np.ceil(np.log2(2 * radon_image.shape[0]))))
+    projection_size_padded = max(64, int(2 ** np.ceil(np.log2(2 * radon_image.shape[0]))))
     pad_width = ((0, projection_size_padded - radon_image.shape[0]), (0, 0))
     img = np.pad(radon_image, pad_width, mode='constant', constant_values=0)
 
@@ -48,31 +49,35 @@ def torch_iradon(radon_image, theta, output_size=None,
     projection = fft(img, axis=0) * fourier_filter
     radon_filtered = np.real(ifft(projection, axis=0))
 
+    # just compare here
+
     # Resize filtered image back to original size
     radon_filtered = radon_filtered[:radon_image.shape[0], :]
     
+    # pdb.set_trace()
     ####################
 
-    preG = np.reshape(radon_filtered, (1,1)+radon_image.shape)
+    preG = np.reshape(radon_image, (1,1)+radon_image.shape)
     radon_imageG = autograd.Variable(torch.from_numpy(preG).type(dtype))
 
-    radon_image_paddedG = torch.cat([radon_imageG, radon_imageG, radon_imageG], dim=2)
+    radon_image_paddedG = torch.cat([radon_imageG, radon_imageG], dim=2)
 
 
     mylist = (np.array(range(radon_image.shape[0])) - ((radon_image.shape[0] - 1) / 2)) / ((radon_image.shape[0] - 1) / 2)
     fourier_filter = 1 - np.abs(mylist)
 
-    # f = fftfreq(radon_image.shape[0]).reshape(-1, 1)   # digital frequency
-    # omega = 2 * np.pi * f                                # angular frequency
-    # fourier_filter = 2 * np.abs(f)                       # ramp filter
-
-    time_filter = ifft(fourier_filter, axis=0).real # todo check why it doesn't output real in the first place
+    time_filter = (irfft(fourier_filter, axis=0).real) # np.fft.fftshift
+    time_filter2 = time_filter.tolist()
+    time_filter2.reverse()
+    time_filter2 = np.array(time_filter2)
+    #time_filter_padded = np.concatenate([time_filter, np.zeros((len(time_filter)-1))])
     preG = np.reshape(time_filter, (1,1,len(time_filter),1))
     hG = autograd.Variable(torch.from_numpy(preG).type(dtype))
 
     radon_padded_filteredG = F.conv2d(radon_image_paddedG, hG)
-    radon_filteredG = radon_padded_filteredG[:,:,(radon_image.shape[0]):(radon_image.shape[0]*2),:]
+    radon_filteredG = radon_padded_filteredG[:,:,:-1,:]
 
+    radon_padded_filtered_test = (radon_padded_filteredG.data).cpu().numpy()
     radon_filtered_test = (radon_filteredG.data).cpu().numpy()
 
 
@@ -111,7 +116,6 @@ def torch_iradon(radon_image, theta, output_size=None,
 if __name__ == '__main__':
     obj = imread('/scratch0/ilya/locDoc/data/siim-medical-images/337/ID_0004_AGE_0056_CONTRAST_1_CT.png', as_grey=True)
     #obj = np.random.rand(256,256)
-    obj.shape
     ang = np.linspace(0., 180., 50, endpoint=False)
     proj = radon(obj, theta=ang, circle=False)
     # b 262
@@ -119,7 +123,11 @@ if __name__ == '__main__':
     rec = torch_iradon(proj, theta=ang, circle=False)
     rec2 = iradon(proj, theta=ang, circle=False)
     reconstructed = (rec.data).cpu().numpy() # and get rid of first two dimensions
+    rec3 = reconstructed[0,0,:,:]
+    im = Image.fromarray(rec3).convert('RGB')
+    im.save('/cfarhomes/ilyak/Desktop/time.png')
     plt.imshow(reconstructed[0,0,:,:], cmap='gray')
     plt.show()
     plt.imshow(rec2, cmap='gray')
+    plt.show()
     pdb.set_trace()
