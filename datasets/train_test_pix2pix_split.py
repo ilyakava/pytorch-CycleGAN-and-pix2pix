@@ -6,15 +6,15 @@ import random as r
 
 import pdb
 
-A_SRC_DIR = '/scratch0/public/rsna-bone-age/50_views'
-B_SRC_DIR = '/scratch0/public/rsna-bone-age/512/train'
-DEST_DIR = '/scratch0/public/rsna-bone-age/pix2pix_50_views'
+A_SRC_DIR = '/vulcan/scratch/snanduri/iradon/data/ellipsoids_large/50_views/'
+B_SRC_DIR = '/vulcan/scratch/snanduri/iradon/data/ellipsoids_large/png/'
+DEST_DIR = '/vulcan/scratch/snanduri/iradon/data/ellipsoids_large/pix2pix_50_views/'
 
 data_root = '/'.join(DEST_DIR.split('/')[:-1])
 
-VAL_SZ = 100
-TEST_SZ = 100
-MAX_TRAIN_SZ = None or 1000
+VAL_SZ = 10000
+TEST_SZ = 20000
+MAX_TRAIN_SZ = None or 120000
 
 train = os.listdir(A_SRC_DIR)
 test = r.sample(train, TEST_SZ)
@@ -47,5 +47,5 @@ for name in val:
 	os.system('cp %s/%s %s/A/val/%s' % (A_SRC_DIR, name, DEST_DIR, name))
 	os.system('cp %s/%s %s/B/val/%s' % (B_SRC_DIR, name, DEST_DIR, name))
  
-print('now run: (in venvconda)\n')
+#print('now run: (in venvconda)\n')
 print('python datasets/combine_A_and_B.py --fold_A %s/A --fold_B %s/B --fold_AB %s/pix2pixmerged' % (DEST_DIR, DEST_DIR, data_root))

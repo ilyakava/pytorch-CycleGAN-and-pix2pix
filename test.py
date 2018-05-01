@@ -21,6 +21,7 @@ if __name__ == '__main__':
     web_dir = os.path.join(opt.results_dir, opt.name, '%s_%s' % (opt.phase, opt.which_epoch))
     webpage = html.HTML(web_dir, 'Experiment = %s, Phase = %s, Epoch = %s' % (opt.name, opt.phase, opt.which_epoch))
     # test
+    mean_psnr = 0
     for i, data in enumerate(dataset):
         if i >= opt.how_many:
             break
@@ -30,5 +31,7 @@ if __name__ == '__main__':
         img_path = model.get_image_paths()
         print('%04d: process image... %s' % (i, img_path))
         visualizer.save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio)
-
+        mean_psnr = mean_psnr + visualizer.calc_PSNR(visuals)
+    mean_psnr = mean_psnr/len(data_loader)
+    print('The mean PSNR is {}'.format(mean_psnr))
     webpage.save()

@@ -12,8 +12,8 @@ from tqdm import tqdm
 
 import pdb
 
-DATA_DIR = '/scratch0/public/rsna-bone-age/512/train/'
-OUT_DIR = '/scratch0/public/rsna-bone-age/50_views/'
+DATA_DIR = '/vulcan/scratch/snanduri/iradon/data/ellipsoids_large/png/'
+OUT_DIR =  '/vulcan/scratch/snanduri/iradon/data/ellipsoids_large/50_views/'
 NANG = 50
 
 ang = np.linspace(0., 180., NANG, endpoint=False)

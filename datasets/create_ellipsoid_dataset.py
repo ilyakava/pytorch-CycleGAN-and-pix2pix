@@ -6,7 +6,7 @@ from tqdm import tqdm
 import odl
 import pdb
 
-OUT_DIR = '/scratch0/ilya/locDoc/data/ellipsoids/png/'
+OUT_DIR = '/vulcan/scratch/snanduri/iradon/data/ellipsoids_large/png/'
 
 def random_ellipse():
 	# from: https://github.com/adler-j/learned_gradient_tomography/blob/72c2dee62d4c619710b5a62cd04b33bf75635287/code/util.py
@@ -25,6 +25,6 @@ def random_phantom(spc):
 size = 512
 space = odl.uniform_discr([-64, -64], [64, 64], [size, size], dtype='float32')
 
-for i in tqdm(range(700)):
-	arr = random_phantom(space)
-	toimage(arr).save(OUT_DIR + ('%03d.png' % i))
+for i in tqdm(range(150000)):
+    arr = random_phantom(space)
+    toimage(arr).save(OUT_DIR + ('%03d.png' % i))

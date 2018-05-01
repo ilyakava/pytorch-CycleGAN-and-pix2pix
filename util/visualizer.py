@@ -5,7 +5,7 @@ import time
 from . import util
 from . import html
 from scipy.misc import imresize
-
+import math
 
 class Visualizer():
     def __init__(self, opt):
@@ -149,3 +149,12 @@ class Visualizer():
             txts.append(label)
             links.append(image_name)
         webpage.add_images(ims, txts, links, width=self.win_size)
+
+    def calc_PSNR(self, visuals):
+        ground_truth = util.tensor2im(visuals['real_A'], imtype=np.float)
+        reconstructed_output = util.tensor2im(visuals['fake_B'], imtype=np.float)
+        mse = np.mean((ground_truth - reconstructed_output) ** 2)
+        if mse == 0:
+            return 100
+        PIXEL_MAX = 255.0
+        return 20 * math.log10(PIXEL_MAX / math.sqrt(mse))
