@@ -56,7 +56,7 @@ class InvRadonLayer(torch.nn.Module):
         t4dim = np.zeros((self.W_in, 1, D_out, D_out, 2))
         for i in range(self.W_in):
             t = ypr * np.cos(th[i]) - xpr * np.sin(th[i])
-
+            
             ty = t / (H_in // 2)
             txval = -1 + i*(2 / (W_in-1)) # (i - radon_filteredG.size(3) / 2) / (radon_filteredG.size(3) / 2)
             tx = np.ones([D_out,D_out]) * txval
@@ -72,20 +72,23 @@ class InvRadonLayer(torch.nn.Module):
         # filter
         radon_padded_filteredG = F.conv2d(radon_image_paddedG, self.hG)
         # unpad
-        radon_filteredG = radon_padded_filteredG[0:1,0:1,(self.hH_in+1):(self.hH_in+self.H_in+1),:]
+        radon_filteredG = radon_padded_filteredG[:,:,(self.hH_in+1):(self.hH_in+self.H_in+1),:]
 
         # accumulator
-        preG = np.zeros((1,1, self.D_out, self.D_out))
+        N_in = radon_imageG.size(0)
+        preG = np.zeros((N_in,1, self.D_out, self.D_out))
         reconstructedG = autograd.Variable(torch.from_numpy(preG).type(dtype))
+        # we need to extend the parameters of the grid sampling once per input size
+        trepeatedG = self.tG.repeat(1,N_in,1,1,1)
         # accumulate
         for i in range(self.W_in):
             # bilinear mode is effectively linear since we are not using the 2nd dimension
-            reconstructedG += F.grid_sample(radon_filteredG, self.tG[i,:,:,:,:], 'bilinear') # one backprojection
+            reconstructedG += F.grid_sample(radon_filteredG, trepeatedG[i,:,:,:,:], 'bilinear') # one backprojection
 
         return reconstructedG * np.pi / (2 * self.W_in)
 
 def torch_iradon(radon_image, theta, output_size=None, filter="ramp", circle=False):
-
+    # for comparrison
 
     if len(theta) != radon_image.shape[1]:
         raise ValueError("The given ``theta`` does not match the number of "
@@ -197,27 +200,40 @@ def test_torch_iradon():
 
 if __name__ == '__main__':
     obj = imread('/scratch0/ilya/locDoc/data/siim-medical-images/337/ID_0004_AGE_0056_CONTRAST_1_CT.png', as_grey=True)
+    obj2 = imread('/scratch0/ilya/locDoc/data/siim-medical-images/337/ID_0000_AGE_0060_CONTRAST_1_CT.png', as_grey=True)
 
     #obj = np.random.rand(256,256)
     nang = 50;
     ang = np.linspace(0., 180., nang, endpoint=False)
-    proj = radon(obj, theta=ang, circle=False)
+    proj = np.expand_dims(radon(obj, theta=ang, circle=False), axis=0)
+    proj2 = np.expand_dims(radon(obj2, theta=ang, circle=False), axis=0)
+
+    projs = np.stack([proj, proj2])
 
     # recG = torch_iradon(proj, theta=ang, circle=False)
     # rec = (recG.data).cpu().numpy()
     # plt.imshow(rec[0,0,:,:])
     # plt.show()
 
-
-    preG = np.reshape(proj, (1,1)+proj.shape)
-    projG = autograd.Variable(torch.from_numpy(preG).type(dtype))
+    projG = autograd.Variable(torch.from_numpy(projs).type(dtype))
 
     # test InvRadonLayer
-    m = InvRadonLayer(proj.shape[0], nang, obj.shape[0])
+    m = InvRadonLayer(proj.shape[1], nang, obj.shape[0])
 
     fpbG = m(projG)
     fbp = (fpbG.data).cpu().numpy()
 
-    plt.imshow(fbp[0,0,:,:])
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4.5))
+    ax1.imshow(obj, cmap=plt.cm.Greys_r)
+    ax2.imshow(fbp[0,0,:,:], cmap=plt.cm.Greys_r)
+    fig.tight_layout()
     plt.show()
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4.5))
+    ax1.imshow(obj2, cmap=plt.cm.Greys_r)
+    ax2.imshow(fbp[1,0,:,:], cmap=plt.cm.Greys_r)
+    fig.tight_layout()
+    plt.show()
+
     pdb.set_trace()
