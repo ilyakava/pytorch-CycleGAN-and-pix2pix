@@ -206,7 +206,7 @@ if __name__ == '__main__':
 
     recG = torch_iradon(proj, theta=ang, circle=False)
     rec = (recG.data).cpu().numpy()
-    plt.imshow(rec)
+    plt.imshow(rec[0,0,:,:])
     plt.show()
 
     pdb.set_trace()
