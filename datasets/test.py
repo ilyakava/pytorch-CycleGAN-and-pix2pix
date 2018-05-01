@@ -27,6 +27,9 @@ dtype = torch.cuda.FloatTensor
 
 class InvRadonLayer(torch.nn.Module):
     def __init__(self, H_in, W_in, D_out):
+        self.W_in = W_in
+        self.D_out = D_out
+        self.hD_out = D_out // 2
         # assumes output is square
         # assumes W_in is number angles and angles were generated this way
         theta = np.linspace(0., 180., W_in, endpoint=False)
@@ -38,8 +41,6 @@ class InvRadonLayer(torch.nn.Module):
         time_filterr = time_filter.tolist()
         time_filterr.reverse()
         time_filterr = np.array(time_filterr)
-        self.rilen = D_out
-        self.rihlen = D_out // 2
 
         preG = np.reshape(time_filterr, (1,1,len(time_filterr),1))
         # this will be learned, initialized to ramp filter
@@ -63,12 +64,13 @@ class InvRadonLayer(torch.nn.Module):
         self.tG = autograd.Variable(torch.from_numpy(t4dim).type(dtype))
 
     def forward(self, radon_imageG):
+        # this works only if 1st dimension of input is 1
         # pad
         radon_image_paddedG = torch.cat([radon_imageG, radon_imageG, radon_imageG], dim=2)
         # filter
         radon_padded_filteredG = F.conv2d(radon_image_paddedG, self.hG)
         # unpad
-        radon_filteredG = radon_padded_filteredG[0,0,(self.rihlen+1):(self.rihlen+self.rilen+1),:]
+        radon_filteredG = radon_padded_filteredG[0,0,(self.hD_out+1):(self.hD_out+self.D_out+1),:]
 
         # accumulator
         preG = np.zeros((1,1, D_out, D_out))
