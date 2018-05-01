@@ -30,7 +30,8 @@ class InvRadonLayer(torch.nn.Module):
         super(InvRadonLayer, self).__init__()
         self.W_in = W_in
         self.D_out = D_out
-        self.hD_out = D_out // 2
+        self.H_in = H_in
+        self.hH_in = H_in // 2
         # assumes output is square
         # assumes W_in is number angles and angles were generated this way
         theta = np.linspace(0., 180., W_in, endpoint=False)
@@ -52,15 +53,15 @@ class InvRadonLayer(torch.nn.Module):
         ypr = Y - int(D_out) // 2
 
         # prepare interpolation grids
-        t4dim = np.zeros((self.W_in, D_out, D_out, 2))
+        t4dim = np.zeros((self.W_in, 1, D_out, D_out, 2))
         for i in range(self.W_in):
             t = ypr * np.cos(th[i]) - xpr * np.sin(th[i])
 
             ty = t / (H_in // 2)
             txval = -1 + i*(2 / (W_in-1)) # (i - radon_filteredG.size(3) / 2) / (radon_filteredG.size(3) / 2)
-            tx = np.ones(ty.shape) * txval
-            t4dim[i,:,:,0] = tx
-            t4dim[i,:,:,1] = ty
+            tx = np.ones([D_out,D_out]) * txval
+            t4dim[i,0,:,:,0] = tx
+            t4dim[i,0,:,:,1] = ty
         # this is a constant
         self.tG = autograd.Variable(torch.from_numpy(t4dim).type(dtype))
 
@@ -71,7 +72,7 @@ class InvRadonLayer(torch.nn.Module):
         # filter
         radon_padded_filteredG = F.conv2d(radon_image_paddedG, self.hG)
         # unpad
-        radon_filteredG = radon_padded_filteredG[0:1,0:1,(self.hD_out+1):(self.hD_out+self.D_out+1),:]
+        radon_filteredG = radon_padded_filteredG[0:1,0:1,(self.hH_in+1):(self.hH_in+self.H_in+1),:]
 
         # accumulator
         preG = np.zeros((1,1, self.D_out, self.D_out))
@@ -79,7 +80,7 @@ class InvRadonLayer(torch.nn.Module):
         # accumulate
         for i in range(self.W_in):
             # bilinear mode is effectively linear since we are not using the 2nd dimension
-            reconstructedG += F.grid_sample(radon_filteredG, self.tG[i:(i+1),:,:,:], 'bilinear') # one backprojection
+            reconstructedG += F.grid_sample(radon_filteredG, self.tG[i,:,:,:,:], 'bilinear') # one backprojection
 
         return reconstructedG * np.pi / (2 * self.W_in)
 
@@ -136,8 +137,6 @@ def torch_iradon(radon_image, theta, output_size=None, filter="ramp", circle=Fal
     rihlen = radon_image.shape[0] // 2
     
     radon_filteredG = radon_padded_filteredG[:,:,(rihlen+1):(rihlen+rilen+1),:]
-
-
 
     # #########################################
 
@@ -204,12 +203,11 @@ if __name__ == '__main__':
     ang = np.linspace(0., 180., nang, endpoint=False)
     proj = radon(obj, theta=ang, circle=False)
 
-    recG = torch_iradon(proj, theta=ang, circle=False)
-    rec = (recG.data).cpu().numpy()
-    plt.imshow(rec[0,0,:,:])
-    plt.show()
+    # recG = torch_iradon(proj, theta=ang, circle=False)
+    # rec = (recG.data).cpu().numpy()
+    # plt.imshow(rec[0,0,:,:])
+    # plt.show()
 
-    pdb.set_trace()
 
     preG = np.reshape(proj, (1,1)+proj.shape)
     projG = autograd.Variable(torch.from_numpy(preG).type(dtype))
@@ -222,3 +220,4 @@ if __name__ == '__main__':
 
     plt.imshow(fbp[0,0,:,:])
     plt.show()
+    pdb.set_trace()
