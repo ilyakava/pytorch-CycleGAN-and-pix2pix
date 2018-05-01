@@ -27,6 +27,7 @@ dtype = torch.cuda.FloatTensor
 
 class InvRadonLayer(torch.nn.Module):
     def __init__(self, H_in, W_in, D_out):
+        super(InvRadonLayer, self).__init__()
         self.W_in = W_in
         self.D_out = D_out
         self.hD_out = D_out // 2
