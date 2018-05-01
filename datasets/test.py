@@ -204,6 +204,8 @@ if __name__ == '__main__':
     ang = np.linspace(0., 180., nang, endpoint=False)
     proj = radon(obj, theta=ang, circle=False)
 
+    pdb.set_trace()
+
     preG = np.reshape(proj, (1,1)+proj.shape)
     projG = autograd.Variable(torch.from_numpy(preG).type(dtype))
 
@@ -213,4 +215,5 @@ if __name__ == '__main__':
     fpbG = m(projG)
     fbp = (fpbG.data).cpu().numpy()
 
-    pdb.set_trace()
+    plt.imshow(fbp[0,0,:,:])
+    plt.show()
