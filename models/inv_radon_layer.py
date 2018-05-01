@@ -10,7 +10,7 @@ from torch.nn.parameter import Parameter
 dtype = torch.cuda.FloatTensor
 
 class InvRadonLayer(torch.nn.Module):
-    def __init__(self, H_in, W_in, D_out):
+    def __init__(self, H_in, W_in, D_out, filter_type='ramp'):
         super(InvRadonLayer, self).__init__()
         self.W_in = W_in
         self.D_out = D_out
@@ -21,12 +21,15 @@ class InvRadonLayer(torch.nn.Module):
         theta = np.linspace(0., 180., W_in, endpoint=False)
         th = (np.pi / 180.0) * theta
         # Construct the filter in Fourier domain
-        f = fftfreq(H_in).reshape(-1, 1)   # digital frequency
-        fourier_filter = 2 * np.abs(f)     # ramp filter
-        time_filter = fftshift(ifft(fourier_filter, axis=0).real)
-        time_filterr = time_filter.tolist()
-        time_filterr.reverse()
-        time_filterr = np.array(time_filterr)
+        if filter_type == 'ramp':
+            f = fftfreq(H_in).reshape(-1, 1)   # digital frequency
+            fourier_filter = 2 * np.abs(f)     # ramp filter
+            time_filter = fftshift(ifft(fourier_filter, axis=0).real)
+            time_filterr = time_filter.tolist()
+            time_filterr.reverse()
+            time_filterr = np.array(time_filterr)
+        else:
+            time_filterr = np.random.rand(H_in)
 
         preG = np.reshape(time_filterr, (1,1,len(time_filterr),1))
         # this will be learned, initialized to ramp filter
