@@ -20,6 +20,20 @@ import torch.nn.functional as F
 dtype = torch.cuda.FloatTensor
 
 #torch.nn.functional.grid_sample(input, grid, mode='bilinear', padding_mode='zeros')
+
+# egs in:
+# http://pytorch.org/tutorials/beginner/pytorch_with_examples.html#pytorch-custom-nn-modules
+# http://pytorch.org/docs/master/_modules/torch/nn/modules/linear.html
+
+class InvRadonLayer(torch.nn.Module):
+    def __init__(self, H_in, W_in, D_out):
+        # assumes W_in is number angles and angles were generated this way
+        theta = np.linspace(0., 180., W_in, endpoint=False)
+        th = (np.pi / 180.0) * theta
+
+        # assumes output is square
+    def forward(self, x):
+
 def torch_iradon(radon_image, theta, output_size=None,
            filter="ramp", circle=False):
 
@@ -63,10 +77,6 @@ def torch_iradon(radon_image, theta, output_size=None,
 
     radon_image_paddedG = torch.cat([radon_imageG, radon_imageG, radon_imageG], dim=2)
 
-
-    # mylist = (np.array(range(radon_image.shape[0])) - ((radon_image.shape[0] - 1) / 2)) / ((radon_image.shape[0] - 1) / 2)
-    # fourier_filter = 1 - np.abs(mylist)
-
     time_filter = fftshift(ifft(fourier_filter, axis=0).real)
     time_filterr = time_filter.tolist()
     time_filterr.reverse()
@@ -82,27 +92,12 @@ def torch_iradon(radon_image, theta, output_size=None,
     radon_filteredG = radon_padded_filteredG[0,0,(rihlen+1):(rihlen+rilen+1),:]
 
 
-    radon_padded_filtered_test = (radon_padded_filteredG.data).cpu().numpy()
-    radon_filtered_test = (radon_filteredG.data).cpu().numpy()
-
-    # pdb.set_trace()
-
-    plt.plot((radon_padded_filtered_test[0,0,(rihlen+1):(rihlen+rilen+1),0]))
-    plt.plot(radon_filtered[:,0])
-    plt.show()
-
-    pdb.set_trace()
-
-
 
     # #########################################
 
     [X, Y] = np.mgrid[0:output_size, 0:output_size]
     xpr = X - int(output_size) // 2
     ypr = Y - int(output_size) // 2
-
-    #preG = np.reshape(radon_filtered, (1,1)+radon_filtered.shape)
-    #radon_filteredG = autograd.Variable(torch.from_numpy(preG).type(dtype))
 
     preG = np.zeros((1,1, output_size, output_size))
     reconstructedG = autograd.Variable(torch.from_numpy(preG).type(dtype))
@@ -151,4 +146,7 @@ if __name__ == '__main__':
     plt.show()
     
     pdb.set_trace()
+
+    #     radon_padded_filtered_test = (radon_padded_filteredG.data).cpu().numpy()
+    # radon_filtered_test = (radon_filteredG.data).cpu().numpy()
 
