@@ -204,6 +204,11 @@ if __name__ == '__main__':
     ang = np.linspace(0., 180., nang, endpoint=False)
     proj = radon(obj, theta=ang, circle=False)
 
+    recG = torch_iradon(proj, theta=ang, circle=False)
+    rec = (recG.data).cpu().numpy()
+    plt.imshow(rec)
+    plt.show()
+
     pdb.set_trace()
 
     preG = np.reshape(proj, (1,1)+proj.shape)
