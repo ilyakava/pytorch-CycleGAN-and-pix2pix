@@ -31,7 +31,8 @@ fourier_filter = 2 * np.abs(f)                       # ramp filter
 # radon_filtered = np.real(ifft(projection, axis=0))
 
 
-time_filter = np.fft.fftshift(fft(fourier_filter, axis=0).real) / len(fourier_filter)
+time_filter = np.fft.fftshift(ifft(fourier_filter, axis=0).real)
+
 sig = radon_image[:,0]
 
 fourier_res = ifft(fft(sig) * fourier_filter[:,0]).real
@@ -42,3 +43,5 @@ time_res_best = np.fft.fftshift(time_res[first_half_projection_size:(first_half_
 
 plt.plot(fourier_res-time_res_best)
 plt.show()
+
+pdb.set_trace()

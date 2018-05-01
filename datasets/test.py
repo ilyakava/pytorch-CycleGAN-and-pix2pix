@@ -27,15 +27,60 @@ dtype = torch.cuda.FloatTensor
 
 class InvRadonLayer(torch.nn.Module):
     def __init__(self, H_in, W_in, D_out):
+        # assumes output is square
         # assumes W_in is number angles and angles were generated this way
         theta = np.linspace(0., 180., W_in, endpoint=False)
         th = (np.pi / 180.0) * theta
+        # Construct the filter in Fourier domain
+        f = fftfreq(H_in).reshape(-1, 1)   # digital frequency
+        fourier_filter = 2 * np.abs(f)     # ramp filter
+        time_filter = fftshift(ifft(fourier_filter, axis=0).real)
+        time_filterr = time_filter.tolist()
+        time_filterr.reverse()
+        time_filterr = np.array(time_filterr)
+        self.rilen = radon_image.shape[0]
+        self.rihlen = radon_image.shape[0] // 2
 
-        # assumes output is square
-    def forward(self, x):
+        preG = np.reshape(time_filterr, (1,1,len(time_filterr),1))
+        # this will be learned, initialized to ramp filter
+        self.hG = autograd.Variable(torch.from_numpy(preG).type(dtype))
 
-def torch_iradon(radon_image, theta, output_size=None,
-           filter="ramp", circle=False):
+        [X, Y] = np.mgrid[0:D_out, 0:D_out]
+        xpr = X - int(D_out) // 2
+        ypr = Y - int(D_out) // 2
+
+        # prepare interpolation grids
+        t4dim = np.zeros((self.W_in, D_out, D_out, 2))
+        for i in range(self.W_in):
+            t = ypr * np.cos(th[i]) - xpr * np.sin(th[i])
+
+            ty = t / (radon_filteredG.size(2) // 2)
+            txval = -1 + i*(2 / (radon_filteredG.size(3)-1)) # (i - radon_filteredG.size(3) / 2) / (radon_filteredG.size(3) / 2)
+            tx = np.ones(ty.shape) * txval
+            t4dim[i,:,:,0] = tx
+            t4dim[i,:,:,1] = ty
+        # this is a constant
+        self.tG = autograd.Variable(torch.from_numpy(t4dim).type(dtype))
+
+    def forward(self, radon_imageG):
+        # pad
+        radon_image_paddedG = torch.cat([radon_imageG, radon_imageG, radon_imageG], dim=2)
+        # filter
+        radon_padded_filteredG = F.conv2d(radon_image_paddedG, self.hG)
+        # unpad
+        radon_filteredG = radon_padded_filteredG[0,0,(self.rihlen+1):(self.rihlen+self.rilen+1),:]
+
+        # accumulator
+        preG = np.zeros((1,1, D_out, D_out))
+        reconstructedG = autograd.Variable(torch.from_numpy(preG).type(dtype))
+        # accumulate
+        for i in range(self.W_in):
+            # bilinear mode is effectively linear since we are not using the 2nd dimension
+            reconstructedG += F.grid_sample(radon_filteredG, self.tG[i,:,:,:], 'bilinear') # one backprojection
+
+        return reconstructedG * np.pi / (2 * self.W_in)
+
+def torch_iradon(radon_image, theta, output_size=None, filter="ramp", circle=False):
 
 
     if len(theta) != radon_image.shape[1]:
@@ -51,25 +96,23 @@ def torch_iradon(radon_image, theta, output_size=None,
 
     # resize image to next power of two (but no less than 64) for
     # Fourier analysis; speeds up Fourier and lessens artifacts
-    projection_size_padded = radon_image.shape[0] #max(64, int(2 ** np.ceil(np.log2(2 * radon_image.shape[0]))))
-    pad_width = ((0, projection_size_padded - radon_image.shape[0]), (0, 0))
-    img = np.pad(radon_image, pad_width, mode='constant', constant_values=0)
+    H_in = radon_image.shape[0] #max(64, int(2 ** np.ceil(np.log2(2 * radon_image.shape[0]))))
+    # pad_width = ((0, H_in - radon_image.shape[0]), (0, 0))
+    # img = np.pad(radon_image, pad_width, mode='constant', constant_values=0)
 
     # Construct the Fourier filter
-    f = fftfreq(projection_size_padded).reshape(-1, 1)   # digital frequency
-    omega = 2 * np.pi * f                                # angular frequency
+    f = fftfreq(H_in).reshape(-1, 1)   # digital frequency
     fourier_filter = 2 * np.abs(f)                       # ramp filter
 
     # Apply filter in Fourier domain
-    projection = fft(img, axis=0) * fourier_filter
-    radon_filtered = np.real(ifft(projection, axis=0))
+    # projection = fft(img, axis=0) * fourier_filter
+    # radon_filtered = np.real(ifft(projection, axis=0))
 
     # just compare here
 
     # Resize filtered image back to original size
-    radon_filtered = radon_filtered[:radon_image.shape[0], :]
-    
-    # pdb.set_trace()
+    # radon_filtered = radon_filtered[:radon_image.shape[0], :]
+
     ####################
 
     preG = np.reshape(radon_image, (1,1)+radon_image.shape)
@@ -121,7 +164,7 @@ def torch_iradon(radon_image, theta, output_size=None,
 
     return reconstructedG * np.pi / (2 * len(th))
 
-if __name__ == '__main__':
+def test_torch_iradon():
     obj = imread('/scratch0/ilya/locDoc/data/siim-medical-images/337/ID_0004_AGE_0056_CONTRAST_1_CT.png', as_grey=True)
     #obj = np.random.rand(256,256)
     ang = np.linspace(0., 180., 50, endpoint=False)
@@ -150,3 +193,6 @@ if __name__ == '__main__':
     #     radon_padded_filtered_test = (radon_padded_filteredG.data).cpu().numpy()
     # radon_filtered_test = (radon_filteredG.data).cpu().numpy()
 
+if __name__ == '__main__':
+    # test InvRadonLayer
+    pdb.set_trace()
