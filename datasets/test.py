@@ -2,7 +2,8 @@ from skimage.transform import radon, rescale, iradon
 import numpy as np
 import scipy
 import scipy.misc
-from scipy.fftpack import fft, ifft, fftfreq, rfft, irfft
+from scipy.fftpack import fftfreq
+from numpy.fft import fft, ifft, fftshift
 from warnings import warn
 import pdb
 
@@ -36,7 +37,7 @@ def torch_iradon(radon_image, theta, output_size=None,
 
     # resize image to next power of two (but no less than 64) for
     # Fourier analysis; speeds up Fourier and lessens artifacts
-    projection_size_padded = max(64, int(2 ** np.ceil(np.log2(2 * radon_image.shape[0]))))
+    projection_size_padded = radon_image.shape[0] #max(64, int(2 ** np.ceil(np.log2(2 * radon_image.shape[0]))))
     pad_width = ((0, projection_size_padded - radon_image.shape[0]), (0, 0))
     img = np.pad(radon_image, pad_width, mode='constant', constant_values=0)
 
@@ -57,30 +58,42 @@ def torch_iradon(radon_image, theta, output_size=None,
     # pdb.set_trace()
     ####################
 
-    preG = np.reshape(img, (1,1)+img.shape)
+    preG = np.reshape(radon_image, (1,1)+radon_image.shape)
     radon_imageG = autograd.Variable(torch.from_numpy(preG).type(dtype))
 
-    radon_image_paddedG = torch.cat([radon_imageG, radon_imageG], dim=2)
+    radon_image_paddedG = torch.cat([radon_imageG, radon_imageG, radon_imageG], dim=2)
 
 
-    mylist = (np.array(range(radon_image.shape[0])) - ((radon_image.shape[0] - 1) / 2)) / ((radon_image.shape[0] - 1) / 2)
-    fourier_filter = 1 - np.abs(mylist)
+    # mylist = (np.array(range(radon_image.shape[0])) - ((radon_image.shape[0] - 1) / 2)) / ((radon_image.shape[0] - 1) / 2)
+    # fourier_filter = 1 - np.abs(mylist)
 
-    time_filter = (irfft(fourier_filter, axis=0).real)  # np.fft.fftshift
-    # time_filter2 = time_filter.tolist()
-    # time_filter2.reverse()
-    # time_filter2 = np.array(time_filter2)
-    #time_filter_padded = np.concatenate([time_filter, np.zeros((len(time_filter)-1))])
-    preG = np.reshape(time_filter, (1,1,len(time_filter),1))
+    time_filter = fftshift(ifft(fourier_filter, axis=0).real)
+    time_filterr = time_filter.tolist()
+    time_filterr.reverse()
+    time_filterr = np.array(time_filterr)
+
+    preG = np.reshape(time_filterr, (1,1,len(time_filterr),1))
     hG = autograd.Variable(torch.from_numpy(preG).type(dtype))
 
     radon_padded_filteredG = F.conv2d(radon_image_paddedG, hG)
-    radon_filteredG = radon_padded_filteredG[:,:,:radon_image.shape[0],:]
+    rilen = radon_image.shape[0]
+    rihlen = radon_image.shape[0] // 2
+    
+    radon_filteredG = radon_padded_filteredG[0,0,(rihlen+1):(rihlen+rilen+1),:]
+
 
     radon_padded_filtered_test = (radon_padded_filteredG.data).cpu().numpy()
     radon_filtered_test = (radon_filteredG.data).cpu().numpy()
 
     # pdb.set_trace()
+
+    plt.plot((radon_padded_filtered_test[0,0,(rihlen+1):(rihlen+rilen+1),0]))
+    plt.plot(radon_filtered[:,0])
+    plt.show()
+
+    pdb.set_trace()
+
+
 
     # #########################################
 
@@ -126,10 +139,16 @@ if __name__ == '__main__':
     rec3 = reconstructed[0,0,:,:]
     im = Image.fromarray(rec3).convert('RGB')
     im.save('/cfarhomes/ilyak/Desktop/time.png')
-    plt.imshow(reconstructed[0,0,:,:], cmap='gray')
+    # plt.imshow(reconstructed[0,0,:,:], cmap='gray')
+    # plt.show()
+    # plt.imshow(rec2, cmap='gray')
+    # plt.show()
+
+    rec2n = (rec2-np.min(rec2))/(np.max(rec2)-np.min(rec2)) * 255.0
+    rec3n = (rec3-np.min(rec3))/(np.max(rec3)-np.min(rec3)) * 255.0
+    showme = plt.imshow(rec2n - rec3n)
+    plt.colorbar(showme)
     plt.show()
-    plt.imshow(rec2, cmap='gray')
-    plt.show()
+    
     pdb.set_trace()
-    # rec4 = (rec3-np.min(rec3))/(np.max(rec3)-np.min(rec3)) * 255.0
 
