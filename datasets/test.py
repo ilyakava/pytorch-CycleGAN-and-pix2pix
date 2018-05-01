@@ -71,7 +71,7 @@ class InvRadonLayer(torch.nn.Module):
         # filter
         radon_padded_filteredG = F.conv2d(radon_image_paddedG, self.hG)
         # unpad
-        radon_filteredG = radon_padded_filteredG[0,0,(self.hD_out+1):(self.hD_out+self.D_out+1),:]
+        radon_filteredG = radon_padded_filteredG[0:1,0:1,(self.hD_out+1):(self.hD_out+self.D_out+1),:]
 
         # accumulator
         preG = np.zeros((1,1, self.D_out, self.D_out))
