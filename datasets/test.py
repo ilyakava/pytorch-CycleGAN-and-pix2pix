@@ -194,5 +194,20 @@ def test_torch_iradon():
     # radon_filtered_test = (radon_filteredG.data).cpu().numpy()
 
 if __name__ == '__main__':
+    obj = imread('/scratch0/ilya/locDoc/data/siim-medical-images/337/ID_0004_AGE_0056_CONTRAST_1_CT.png', as_grey=True)
+
+    #obj = np.random.rand(256,256)
+    nang = 50;
+    ang = np.linspace(0., 180., nang, endpoint=False)
+    proj = radon(obj, theta=ang, circle=False)
+
+    preG = np.reshape(proj, (1,1)+proj.shape)
+    projG = autograd.Variable(torch.from_numpy(preG).type(dtype))
+
     # test InvRadonLayer
+    m = InvRadonLayer(proj.shape[0], nang, obj.shape[0])
+    
+    fpbG = m(projG)
+    fbp = (fpbG.data).cpu().numpy()
+
     pdb.set_trace()
