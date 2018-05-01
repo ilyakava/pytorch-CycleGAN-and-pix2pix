@@ -135,7 +135,7 @@ def torch_iradon(radon_image, theta, output_size=None, filter="ramp", circle=Fal
     rilen = radon_image.shape[0]
     rihlen = radon_image.shape[0] // 2
     
-    radon_filteredG = radon_padded_filteredG[0,0,(rihlen+1):(rihlen+rilen+1),:]
+    radon_filteredG = radon_padded_filteredG[:,:,(rihlen+1):(rihlen+rilen+1),:]
 
 
 
