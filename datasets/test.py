@@ -79,7 +79,7 @@ class InvRadonLayer(torch.nn.Module):
         # accumulate
         for i in range(self.W_in):
             # bilinear mode is effectively linear since we are not using the 2nd dimension
-            reconstructedG += F.grid_sample(radon_filteredG, self.tG[i,:,:,:], 'bilinear') # one backprojection
+            reconstructedG += F.grid_sample(radon_filteredG, self.tG[i:(i+1),:,:,:], 'bilinear') # one backprojection
 
         return reconstructedG * np.pi / (2 * self.W_in)
 
