@@ -74,7 +74,7 @@ class InvRadonLayer(torch.nn.Module):
         radon_filteredG = radon_padded_filteredG[0,0,(self.hD_out+1):(self.hD_out+self.D_out+1),:]
 
         # accumulator
-        preG = np.zeros((1,1, D_out, D_out))
+        preG = np.zeros((1,1, self.D_out, self.D_out))
         reconstructedG = autograd.Variable(torch.from_numpy(preG).type(dtype))
         # accumulate
         for i in range(self.W_in):
