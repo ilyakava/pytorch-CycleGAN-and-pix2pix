@@ -38,8 +38,8 @@ class InvRadonLayer(torch.nn.Module):
         time_filterr = time_filter.tolist()
         time_filterr.reverse()
         time_filterr = np.array(time_filterr)
-        self.rilen = radon_image.shape[0]
-        self.rihlen = radon_image.shape[0] // 2
+        self.rilen = D_out
+        self.rihlen = D_out // 2
 
         preG = np.reshape(time_filterr, (1,1,len(time_filterr),1))
         # this will be learned, initialized to ramp filter
@@ -54,8 +54,8 @@ class InvRadonLayer(torch.nn.Module):
         for i in range(self.W_in):
             t = ypr * np.cos(th[i]) - xpr * np.sin(th[i])
 
-            ty = t / (radon_filteredG.size(2) // 2)
-            txval = -1 + i*(2 / (radon_filteredG.size(3)-1)) # (i - radon_filteredG.size(3) / 2) / (radon_filteredG.size(3) / 2)
+            ty = t / (H_in // 2)
+            txval = -1 + i*(2 / (W_in-1)) # (i - radon_filteredG.size(3) / 2) / (radon_filteredG.size(3) / 2)
             tx = np.ones(ty.shape) * txval
             t4dim[i,:,:,0] = tx
             t4dim[i,:,:,1] = ty
@@ -206,7 +206,7 @@ if __name__ == '__main__':
 
     # test InvRadonLayer
     m = InvRadonLayer(proj.shape[0], nang, obj.shape[0])
-    
+
     fpbG = m(projG)
     fbp = (fpbG.data).cpu().numpy()
 
