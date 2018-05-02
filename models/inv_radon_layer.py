@@ -7,7 +7,33 @@ import torch.autograd as autograd
 import torch.nn.functional as F
 from torch.nn.parameter import Parameter
 
+import pdb
+
 dtype = torch.cuda.FloatTensor
+
+def fourier_fbp_filter(H_in, filter_type='ramp'):
+    f = fftfreq(H_in).reshape(-1, 1)   # digital frequency
+    fourier_filter = 2 * np.abs(f)     # ramp filter
+    omega = 2 * np.pi * f 
+    if filter_type == 'ramp':
+        pass
+    elif filter_type == "shepp-logan":
+        fourier_filter *= np.sinc(omega/(2*np.pi))
+    elif filter_type == "cosine":
+        fourier_filter *= np.cos(omega)
+    elif filter_type == "hamming":
+        fourier_filter *= (0.54 + 0.46 * np.cos(omega / 2))
+    elif filter_type == "hann":
+        fourier_filter *= (1 + np.cos(omega / 2)) / 2
+    elif filter_type == 'none':
+        fourier_filter[:] = 1
+    elif filter_type == "shepp-logan-double": # seen in rice
+        fourier_filter *= np.sinc(omega/(np.pi))
+    elif filter_type == "rand":
+        fourier_filter = np.random.rand(H_in,1)
+    else:
+        error('invalid filter type requests')
+    return fourier_filter    
 
 class InvRadonLayer(torch.nn.Module):
     def __init__(self, H_in, W_in, D_out, filter_type='ramp'):
@@ -21,15 +47,11 @@ class InvRadonLayer(torch.nn.Module):
         theta = np.linspace(0., 180., W_in, endpoint=False)
         th = (np.pi / 180.0) * theta
         # Construct the filter in Fourier domain
-        if filter_type == 'ramp':
-            f = fftfreq(H_in).reshape(-1, 1)   # digital frequency
-            fourier_filter = 2 * np.abs(f)     # ramp filter
-            time_filter = fftshift(ifft(fourier_filter, axis=0).real)
-            time_filterr = time_filter.tolist()
-            time_filterr.reverse()
-            time_filterr = np.array(time_filterr)
-        else:
-            time_filterr = np.random.rand(H_in)
+        fourier_filter = fourier_fbp_filter(H_in, filter_type)
+        time_filter = fftshift(ifft(fourier_filter, axis=0).real)
+        time_filterr = time_filter.tolist()
+        time_filterr.reverse()
+        time_filterr = np.array(time_filterr)
 
         preG = np.reshape(time_filterr, (1,1,len(time_filterr),1))
         # this will be learned, initialized to ramp filter

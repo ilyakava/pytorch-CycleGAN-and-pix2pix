@@ -1,3 +1,6 @@
+import os, sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import numpy as np
 from scipy.fftpack import fftfreq
 from numpy.fft import fft, ifft, fftshift
@@ -8,6 +11,8 @@ import torch.nn.functional as F
 from torch.nn.parameter import Parameter
 
 import pdb
+
+from models.inv_radon_layer import fourier_fbp_filter
 
 import pytorch_fft.fft.autograd as torchfft
 fft2d = torchfft.Fft2d()
@@ -27,12 +32,8 @@ class InvRadonFourierLayer(torch.nn.Module):
         theta = np.linspace(0., 180., W_in, endpoint=False)
         th = (np.pi / 180.0) * theta
         # Construct the filter in Fourier domain
-        if filter_type == 'ramp':
-            f = fftfreq(H_in).reshape(-1, 1)   # digital frequency
-            fourier_filter = 2 * np.abs(f)     # ramp filter
-        else:
-            fourier_filter = np.random.rand(H_in)
-
+        fourier_filter = fourier_fbp_filter(H_in, filter_type)
+        
         preG = np.reshape(fourier_filter, (1,1,len(fourier_filter),1))
         # this will be learned, initialized to ramp filter
         self.hG = Parameter(torch.from_numpy(preG).type(dtype))

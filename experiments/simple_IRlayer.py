@@ -44,7 +44,7 @@ H_in, W_in = eg_proj.shape
 N = len(infiles)
 
 load_data = 1
-learning_domain = 'time'
+learning_domain = 'fourier'
 
 if load_data == 0:
     projs = np.zeros([N, 1, H_in, W_in])
@@ -73,13 +73,13 @@ y = autograd.Variable(torch.from_numpy(ims).type(dtype), requires_grad=False)
 
 # Construct our model by instantiating the class defined above
 if learning_domain == 'time':
-    model = nn.Sequential(InvRadonLayer(H_in, W_in, D_out),
+    model = nn.Sequential(InvRadonLayer(H_in, W_in, D_out, 'shepp-logan'),
         nn.Sigmoid() )
     mylr = 1e-7
 elif learning_domain == 'fourier':
-    model = nn.Sequential(InvRadonFourierLayer(H_in, W_in, D_out),
+    model = nn.Sequential(InvRadonFourierLayer(H_in, W_in, D_out, 'rand'),
         nn.ReLU() )
-    mylr = 1e-11
+    mylr = 1e-7
 else:
     error('invalid learning_domain set')
 
@@ -123,11 +123,11 @@ for t in range(500):
             last_itr_visuals.append(vis.line(now_tf - orig_tf, opts={'title': 'Now - Orig Time filter'}))
             last_itr_visuals.append(vis.line(now_ff - orig_ff, opts={'title': 'Now - Orig Fourier filter'}))
             
-        k = 8#random.randint(0,N-1)
+        k = 8 #random.randint(0,N-1)
         y_predC = (y_pred.data).cpu().numpy()
         pred_img = y_predC[k,0,:,:]
         pred_img[pred_img < 0] = 0
-        last_itr_visuals.append(vis.image(pred_img))
+        last_itr_visuals.append(vis.image(pred_img, opts={'title': 'pred image k=%i' % k}))
         last_itr_visuals.append(vis.image(ims[k,0,:,:], opts={'title': 'gt image k=%i' % k}))
 
         if t == 0:
@@ -138,7 +138,7 @@ for t in range(500):
             last_itr_visuals.append(vis.image(now_fbp_img - orig_fbp_img, opts={'title': 'now - orig fbp image k=%i' % k}))
 
         # heatmaps are slow
-        # last_itr_visuals.append(vis.heatmap(np.flipud(y_predC[k,0,:,:]), opts={'title': 'pred heatmap'}))
+        last_itr_visuals.append(vis.heatmap(np.flipud(y_predC[k,0,:,:]), opts={'title': 'pred heatmap'}))
 
     print(t, loss.data[0])
 
