@@ -32,6 +32,7 @@ vis = visdom.Visdom()
 
 dtype = torch.cuda.FloatTensor
 DATA_DIR = '/scratch0/ilya/locDoc/data/siim-medical-images/pix2pix_50_views/B/train/'
+NPY_DIR = '/scratch0/public/siim-medical-images/50_views_npys/'
 # projs_file = None or 
 
 nang = 50;
@@ -43,7 +44,7 @@ D_out = eg_obj.shape[0]
 H_in, W_in = eg_proj.shape
 N = len(infiles)
 
-load_data = 1
+load_data = 2
 learning_domain = 'time'
 
 if load_data == 0:
@@ -60,6 +61,16 @@ if load_data == 0:
 
     np.save('/scratch0/ilya/locDoc/data/siim-medical-images/85projs.npy', projs)
     np.save('/scratch0/ilya/locDoc/data/siim-medical-images/85ims.npy', ims)
+elif load_data ==2:
+    projs = np.zeros([N, 1, H_in, W_in])
+    ims = np.zeros([N, 1, D_out, D_out])
+
+    for i in tqdm(range(N)):
+        filename = infiles[i]
+        obj = imread(DATA_DIR + filename)
+        proj = np.load(NPY_DIR + filename + '.npy')
+        projs[i,0,:,:] = proj
+        ims[i,0,:,:] = obj
 else:
     projs = np.load('/scratch0/ilya/locDoc/data/siim-medical-images/85projs.npy')
     ims = np.load('/scratch0/ilya/locDoc/data/siim-medical-images/85ims.npy')
