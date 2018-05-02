@@ -12,15 +12,15 @@ from tqdm import tqdm
 
 import pdb
 
-DATA_DIR = '/scratch0/public/rsna-bone-age/512/train/'
+DATA_DIR = '/scratch0/public/siim-medical-images/337/'
 # OUT_DIR = '/scratch0/public/rsna-bone-age/50_views/'
-NPY_OUT_DIR = '/scratch0/public/rsna-bone-age/50_views_npys/'
+NPY_OUT_DIR = '/scratch0/public/siim-medical-images/50_views_npys_fixed/'
 NANG = 50
 
 ang = np.linspace(0., 180., NANG, endpoint=False)
 
 for filename in tqdm(os.listdir(DATA_DIR)):
-    obj = imread(DATA_DIR + filename, as_grey=True)
+    obj = imread(DATA_DIR + filename, as_grey=True) / 255.0
     proj = radon(obj, theta=ang, circle=False)
     np.save(NPY_OUT_DIR + filename, proj)
 
