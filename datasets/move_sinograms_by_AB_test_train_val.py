@@ -22,10 +22,10 @@ os.system('mkdir %s/test' % C_DEST_DIR)
 os.system('mkdir %s/val' % C_DEST_DIR)
 
 for name in train:
-    os.system('cp %s/%s.npy %s/train/%s.npy' % (C_SRC_DIR, name, C_DEST_DIR, name))
+    os.system('cp %s/%s.npy %s/C/train/%s.npy' % (C_SRC_DIR, name, C_DEST_DIR, name))
 
 for name in test:
-    os.system('cp %s/%s.npy %s/val/%s.npy' % (C_SRC_DIR, name, C_DEST_DIR, name))
+    os.system('cp %s/%s.npy %s/C/test/%s.npy' % (C_SRC_DIR, name, C_DEST_DIR, name))
 
 for name in val:
-    os.system('cp %s/%s.npy %s/val/%s.npy' % (C_SRC_DIR, name, C_DEST_DIR, name))
+    os.system('cp %s/%s.npy %s/C/val/%s.npy' % (C_SRC_DIR, name, C_DEST_DIR, name))
