@@ -32,7 +32,7 @@ vis = visdom.Visdom()
 
 dtype = torch.cuda.FloatTensor
 DATA_DIR = '/scratch0/ilya/locDoc/data/siim-medical-images/pix2pix_50_views/B/train/'
-NPY_DIR = '/scratch0/public/siim-medical-images/50_views_npys/'
+NPY_DIR = '/scratch0/public/siim-medical-images/50_views_npys_fixed/'
 # projs_file = None or 
 
 nang = 50;
