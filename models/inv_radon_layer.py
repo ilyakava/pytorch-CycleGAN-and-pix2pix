@@ -26,7 +26,7 @@ def fourier_fbp_filter(H_in, W_in, filter_type='ramp'):
     elif filter_type == "hann":
         fourier_filter *= (1 + np.cos(omega / 2)) / 2
     elif filter_type == 'none':
-        fourier_filter[:] = 1
+        fourier_filter[:] = 1 / W_in
     elif filter_type == "shepp-logan-double": # seen in rice
         fourier_filter *= np.sinc(omega/(np.pi))
     elif filter_type == "rand":

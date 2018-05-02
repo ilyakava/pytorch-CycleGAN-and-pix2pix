@@ -73,13 +73,13 @@ y = autograd.Variable(torch.from_numpy(ims).type(dtype), requires_grad=False)
 
 # Construct our model by instantiating the class defined above
 if learning_domain == 'time':
-    model = nn.Sequential(InvRadonLayer(H_in, W_in, D_out, 'rand'),
-        nn.ReLU() )
-    mylr = 1e-9
+    model = nn.Sequential(InvRadonLayer(H_in, W_in, D_out, 'ramp'),
+        nn.Sigmoid() )
+    mylr = 0
 elif learning_domain == 'fourier':
     model = nn.Sequential(InvRadonFourierLayer(H_in, W_in, D_out, 'rand'),
         nn.ReLU() )
-    mylr = 1e-7
+    mylr = 1e-6
 else:
     error('invalid learning_domain set')
 
@@ -87,7 +87,7 @@ else:
 
 # Construct our loss function and an Optimizer. Training this strange model with
 # vanilla stochastic gradient descent is tough, so we use momentum
-criterion = torch.nn.MSELoss(size_average=False)
+criterion = torch.nn.L1Loss(size_average=False)
 optimizer = torch.optim.SGD(model.parameters(), lr=mylr, momentum=0.9)
 for t in range(500):
     # Forward pass: Compute predicted y by passing x to the model
