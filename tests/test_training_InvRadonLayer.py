@@ -6,7 +6,7 @@ import numpy as np
 import scipy
 import scipy.misc
 from scipy.fftpack import fftfreq
-from numpy.fft import fft, ifft, fftshift
+from numpy.fft import fft, ifft, fftshift, ifftshift
 from warnings import warn
 import pdb
 
@@ -24,6 +24,10 @@ from models.inv_radon_layer import InvRadonLayer
 
 from tqdm import tqdm
 
+import random
+import visdom
+vis = visdom.Visdom()
+
 dtype = torch.cuda.FloatTensor
 DATA_DIR = '/scratch0/ilya/locDoc/data/siim-medical-images/pix2pix_50_views/B/train/'
 # projs_file = None or 
@@ -37,7 +41,7 @@ D_out = eg_obj.shape[0]
 H_in, W_in = eg_proj.shape
 N = len(infiles)
 
-load_data = 1
+load_data = 0
 
 if load_data == 0:
     projs = np.zeros([N, 1, H_in, W_in])
@@ -49,7 +53,7 @@ if load_data == 0:
         proj = radon(obj, theta=ang, circle=False)
         projs[i,0,:,:] = proj
         ims[i,0,:,:] = obj
-    projs = (projs - np.min(projs)) / (np.max(projs) - np.min(projs))
+    # projs = (projs - np.min(projs)) / (np.max(projs) - np.min(projs))
 
     np.save('/scratch0/ilya/locDoc/data/siim-medical-images/85projs.npy', projs)
     np.save('/scratch0/ilya/locDoc/data/siim-medical-images/85ims.npy', ims)
@@ -57,6 +61,8 @@ else:
     projs = np.load('/scratch0/ilya/locDoc/data/siim-medical-images/85projs.npy')
     ims = np.load('/scratch0/ilya/locDoc/data/siim-medical-images/85ims.npy')
 
+last_itr_visuals = []
+losses = []
 
 # Create random Tensors to hold inputs and outputs
 x = autograd.Variable(torch.from_numpy(projs).type(dtype), requires_grad=True)
@@ -75,13 +81,21 @@ for t in range(500):
 
     # Compute and print loss
     loss = criterion(y_pred, y)
-    y_pred_test = (y_pred.data).cpu().numpy()
-    if t == 0 or t > 10:
+    losses.append(loss)
+    if t > -1:
+        while len(last_itr_visuals) > 0:
+            visual = last_itr_visuals.pop()
+            vis.close(visual)
+
+        last_itr_visuals.append(vis.line(losses, opts={'title': 'Losses'}))
         params = list(model.parameters())[0].data
-        plt.plot(params.cpu().numpy()[0,0,:,0])
-        # plt.imshow([0,0,:,:])
-        plt.show()
-        pdb.set_trace()
+        time_filter = params.cpu().numpy()[0,0,:,0]
+        last_itr_visuals.append(vis.line(fftshift(fft(ifftshift(time_filter)).real)), , opts={'title': 'Fourier filter'})
+        k = random.randint(0,N)
+        y_predC = (y_pred.data).cpu().numpy()
+        last_itr_visuals.append(vis.image(y_predC[k,0,:,:]))
+        last_itr_visuals.append(vis.image(ims[k,0,:,:]))
+
     print(t, loss.data[0])
 
     # Zero gradients, perform a backward pass, and update the weights.
