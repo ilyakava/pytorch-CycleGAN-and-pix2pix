@@ -41,7 +41,7 @@ D_out = eg_obj.shape[0]
 H_in, W_in = eg_proj.shape
 N = len(infiles)
 
-load_data = 0
+load_data = 1
 
 if load_data == 0:
     projs = np.zeros([N, 1, H_in, W_in])
@@ -53,7 +53,7 @@ if load_data == 0:
         proj = radon(obj, theta=ang, circle=False)
         projs[i,0,:,:] = proj
         ims[i,0,:,:] = obj
-    # projs = (projs - np.min(projs)) / (np.max(projs) - np.min(projs))
+    #projs = (projs - np.min(projs)) / (np.max(projs) - np.min(projs))
 
     np.save('/scratch0/ilya/locDoc/data/siim-medical-images/85projs.npy', projs)
     np.save('/scratch0/ilya/locDoc/data/siim-medical-images/85ims.npy', ims)
@@ -74,27 +74,31 @@ model = InvRadonLayer(H_in, W_in, D_out)
 # Construct our loss function and an Optimizer. Training this strange model with
 # vanilla stochastic gradient descent is tough, so we use momentum
 criterion = torch.nn.MSELoss(size_average=False)
-optimizer = torch.optim.SGD(model.parameters(), lr=1e-11, momentum=0.9)
+optimizer = torch.optim.SGD(model.parameters(), lr=4e-14, momentum=0.9)
 for t in range(500):
     # Forward pass: Compute predicted y by passing x to the model
     y_pred = model(x)
 
     # Compute and print loss
     loss = criterion(y_pred, y)
-    losses.append(loss)
+    losses.append(loss.data[0])
     if t > -1:
         while len(last_itr_visuals) > 0:
             visual = last_itr_visuals.pop()
             vis.close(visual)
-
-        last_itr_visuals.append(vis.line(losses, opts={'title': 'Losses'}))
+        
+        last_itr_visuals.append(vis.line(np.array(losses), opts={'title': 'Losses for %i itrs' % t}))
         params = list(model.parameters())[0].data
         time_filter = params.cpu().numpy()[0,0,:,0]
-        last_itr_visuals.append(vis.line(fftshift(fft(ifftshift(time_filter)).real)), , opts={'title': 'Fourier filter'})
-        k = random.randint(0,N)
+        last_itr_visuals.append(vis.line(time_filter, opts={'title': 'Time filter'}))
+        last_itr_visuals.append(vis.line(fftshift(fft(ifftshift(time_filter)).real), opts={'title': 'Fourier filter'}))
+        k = 8#random.randint(0,N-1)
         y_predC = (y_pred.data).cpu().numpy()
-        last_itr_visuals.append(vis.image(y_predC[k,0,:,:]))
-        last_itr_visuals.append(vis.image(ims[k,0,:,:]))
+        pred_img = y_predC[k,0,:,:]
+        pred_img[pred_img < 0] = 0
+        last_itr_visuals.append(vis.image(pred_img))
+        last_itr_visuals.append(vis.image(ims[k,0,:,:], opts={'title': 'gt image k=%i' % k}))
+        last_itr_visuals.append(vis.heatmap(np.flipud(y_predC[k,0,:,:]), opts={'title': 'pred heatmap'}))
 
     print(t, loss.data[0])
 
