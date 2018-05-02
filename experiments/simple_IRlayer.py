@@ -44,7 +44,7 @@ H_in, W_in = eg_proj.shape
 N = len(infiles)
 
 load_data = 1
-learning_domain = 'fourier'
+learning_domain = 'time'
 
 if load_data == 0:
     projs = np.zeros([N, 1, H_in, W_in])
@@ -73,9 +73,9 @@ y = autograd.Variable(torch.from_numpy(ims).type(dtype), requires_grad=False)
 
 # Construct our model by instantiating the class defined above
 if learning_domain == 'time':
-    model = nn.Sequential(InvRadonLayer(H_in, W_in, D_out, 'shepp-logan'),
-        nn.Sigmoid() )
-    mylr = 1e-7
+    model = nn.Sequential(InvRadonLayer(H_in, W_in, D_out, 'rand'),
+        nn.ReLU() )
+    mylr = 1e-9
 elif learning_domain == 'fourier':
     model = nn.Sequential(InvRadonFourierLayer(H_in, W_in, D_out, 'rand'),
         nn.ReLU() )

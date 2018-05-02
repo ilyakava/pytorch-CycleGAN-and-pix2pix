@@ -32,7 +32,7 @@ class InvRadonFourierLayer(torch.nn.Module):
         theta = np.linspace(0., 180., W_in, endpoint=False)
         th = (np.pi / 180.0) * theta
         # Construct the filter in Fourier domain
-        fourier_filter = fourier_fbp_filter(H_in, filter_type)
+        fourier_filter = fourier_fbp_filter(H_in, W_in, filter_type)
         
         preG = np.reshape(fourier_filter, (1,1,len(fourier_filter),1))
         # this will be learned, initialized to ramp filter

@@ -11,7 +11,7 @@ import pdb
 
 dtype = torch.cuda.FloatTensor
 
-def fourier_fbp_filter(H_in, filter_type='ramp'):
+def fourier_fbp_filter(H_in, W_in, filter_type='ramp'):
     f = fftfreq(H_in).reshape(-1, 1)   # digital frequency
     fourier_filter = 2 * np.abs(f)     # ramp filter
     omega = 2 * np.pi * f 
@@ -30,7 +30,7 @@ def fourier_fbp_filter(H_in, filter_type='ramp'):
     elif filter_type == "shepp-logan-double": # seen in rice
         fourier_filter *= np.sinc(omega/(np.pi))
     elif filter_type == "rand":
-        fourier_filter = np.random.rand(H_in,1)
+        fourier_filter = np.random.rand(H_in,1) / W_in
     else:
         error('invalid filter type requests')
     return fourier_filter    
@@ -47,7 +47,7 @@ class InvRadonLayer(torch.nn.Module):
         theta = np.linspace(0., 180., W_in, endpoint=False)
         th = (np.pi / 180.0) * theta
         # Construct the filter in Fourier domain
-        fourier_filter = fourier_fbp_filter(H_in, filter_type)
+        fourier_filter = fourier_fbp_filter(H_in, W_in, filter_type)
         time_filter = fftshift(ifft(fourier_filter, axis=0).real)
         time_filterr = time_filter.tolist()
         time_filterr.reverse()
