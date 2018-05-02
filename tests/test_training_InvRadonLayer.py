@@ -21,6 +21,7 @@ import torch.nn.functional as F
 from torch.nn.parameter import Parameter
 
 from models.inv_radon_layer import InvRadonLayer
+from models.inv_radon_fourier_layer import InvRadonFourierLayer
 
 from tqdm import tqdm
 
@@ -42,6 +43,7 @@ H_in, W_in = eg_proj.shape
 N = len(infiles)
 
 load_data = 1
+learning_domain = 'time'
 
 if load_data == 0:
     projs = np.zeros([N, 1, H_in, W_in])
@@ -69,12 +71,21 @@ x = autograd.Variable(torch.from_numpy(projs).type(dtype), requires_grad=True)
 y = autograd.Variable(torch.from_numpy(ims).type(dtype), requires_grad=False)
 
 # Construct our model by instantiating the class defined above
-model = InvRadonLayer(H_in, W_in, D_out)
+if learning_domain == 'time':
+    model = InvRadonLayer(H_in, W_in, D_out)
+    mylr = 4e-14
+elif learning_domain == 'fourier':
+    model = InvRadonFourierLayer(H_in, W_in, D_out)
+    mylr = 1e-11
+else:
+    error('invalid learning_domain set')
+
+# original 
 
 # Construct our loss function and an Optimizer. Training this strange model with
 # vanilla stochastic gradient descent is tough, so we use momentum
 criterion = torch.nn.MSELoss(size_average=False)
-optimizer = torch.optim.SGD(model.parameters(), lr=4e-14, momentum=0.9)
+optimizer = torch.optim.SGD(model.parameters(), lr=mylr, momentum=0.9)
 for t in range(500):
     # Forward pass: Compute predicted y by passing x to the model
     y_pred = model(x)
@@ -87,18 +98,43 @@ for t in range(500):
             visual = last_itr_visuals.pop()
             vis.close(visual)
         
-        last_itr_visuals.append(vis.line(np.array(losses), opts={'title': 'Losses for %i itrs' % t}))
+        last_itr_visuals.append(vis.line(np.array(losses), opts={'title': 'Loss@%i itrs, learn in %s dom' % (t, learning_domain)}))
         params = list(model.parameters())[0].data
-        time_filter = params.cpu().numpy()[0,0,:,0]
-        last_itr_visuals.append(vis.line(time_filter, opts={'title': 'Time filter'}))
-        last_itr_visuals.append(vis.line(fftshift(fft(ifftshift(time_filter)).real), opts={'title': 'Fourier filter'}))
+        if learning_domain == 'time':
+            time_filter = params.cpu().numpy()[0,0,:,0]
+            fourier_filter = fftshift(fft(ifftshift(time_filter)).real)
+            last_itr_visuals.append(vis.line(time_filter, opts={'title': 'Time filter'}))
+            last_itr_visuals.append(vis.line(fourier_filter, opts={'title': 'Fourier filter'}))
+        elif learning_domain == 'fourier':
+            fourier_filter = fftshift(params.cpu().numpy()[0,0,:,0])
+            time_filter = fftshift(ifft(ifftshift(fourier_filter))).real
+            last_itr_visuals.append(vis.line(fourier_filter, opts={'title': 'Fourier filter'}))
+            last_itr_visuals.append(vis.line(time_filter, opts={'title': 'Time filter'}))
+        if t == 0:
+            orig_tf = time_filter
+            orig_ff = fourier_filter
+        elif t > 0:
+            now_tf = time_filter
+            now_ff = fourier_filter
+            last_itr_visuals.append(vis.line(now_tf - orig_tf, opts={'title': 'Now - Orig Time filter'}))
+            last_itr_visuals.append(vis.line(now_ff - orig_ff, opts={'title': 'Now - Orig Fourier filter'}))
+            
         k = 8#random.randint(0,N-1)
         y_predC = (y_pred.data).cpu().numpy()
         pred_img = y_predC[k,0,:,:]
         pred_img[pred_img < 0] = 0
         last_itr_visuals.append(vis.image(pred_img))
         last_itr_visuals.append(vis.image(ims[k,0,:,:], opts={'title': 'gt image k=%i' % k}))
-        last_itr_visuals.append(vis.heatmap(np.flipud(y_predC[k,0,:,:]), opts={'title': 'pred heatmap'}))
+
+        if t == 0:
+            orig_fbp_imgs = y_predC
+        elif t > 0:
+            orig_fbp_img = orig_fbp_imgs[k,0,:,:]
+            now_fbp_img = y_predC[k,0,:,:]
+            last_itr_visuals.append(vis.image(now_fbp_img - orig_fbp_img, opts={'title': 'now - orig fbp image k=%i' % k}))
+
+        # heatmaps are slow
+        # last_itr_visuals.append(vis.heatmap(np.flipud(y_predC[k,0,:,:]), opts={'title': 'pred heatmap'}))
 
     print(t, loss.data[0])
 
