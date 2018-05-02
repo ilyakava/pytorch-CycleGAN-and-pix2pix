@@ -151,10 +151,41 @@ class Visualizer():
         webpage.add_images(ims, txts, links, width=self.win_size)
 
     def calc_PSNR(self, visuals):
-        ground_truth = util.tensor2im(visuals['real_A'], imtype=np.float)
+        ground_truth = util.tensor2im(visuals['real_B'], imtype=np.float)
         reconstructed_output = util.tensor2im(visuals['fake_B'], imtype=np.float)
         mse = np.mean((ground_truth - reconstructed_output) ** 2)
         if mse == 0:
             return 100
         PIXEL_MAX = 255.0
         return 20 * math.log10(PIXEL_MAX / math.sqrt(mse))
+    
+    def calc_SNR(self, visuals):
+        ground_truth = util.tensor2im(visuals['real_B'], imtype=np.float)
+        reconstructed_output = util.tensor2im(visuals['fake_B'], imtype=np.float)
+        mse = np.mean((ground_truth - reconstructed_output) ** 2)
+        if mse == 0:
+            return 100
+        PIXEL_MAX = 255.0
+        return 20 * math.log10(math.sqrt(np.mean(ground_truth ** 2)) / math.sqrt(mse))
+
+    def calc_PSNR_fbp(self, visuals):
+        ground_truth = util.tensor2im(visuals['real_B'], imtype=np.float)
+        fbp_output = util.tensor2im(visuals['real_A'], imtype=np.float)
+        mse = np.mean((ground_truth - fbp_output) ** 2)
+        if mse == 0:
+            return 100
+        PIXEL_MAX = 255.0
+        return 20 * math.log10(PIXEL_MAX / math.sqrt(mse))
+
+    def calc_SNR_fbp(self, visuals):
+        ground_truth = util.tensor2im(visuals['real_B'], imtype=np.float)
+        fbp_output = util.tensor2im(visuals['real_A'], imtype=np.float)
+        mse = np.mean((ground_truth - fbp_output) ** 2)
+        if mse == 0:
+            return 100
+        PIXEL_MAX = 255.0
+        return 20 * math.log10(math.sqrt(np.mean(ground_truth ** 2)) / math.sqrt(mse))
+
+
+
+

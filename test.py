@@ -22,6 +22,9 @@ if __name__ == '__main__':
     webpage = html.HTML(web_dir, 'Experiment = %s, Phase = %s, Epoch = %s' % (opt.name, opt.phase, opt.which_epoch))
     # test
     mean_psnr = 0
+    mean_snr = 0
+    mean_psnr_fbp = 0
+    mean_snr_fbp = 0
     for i, data in enumerate(dataset):
         if i >= opt.how_many:
             break
@@ -32,6 +35,15 @@ if __name__ == '__main__':
         print('%04d: process image... %s' % (i, img_path))
         visualizer.save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio)
         mean_psnr = mean_psnr + visualizer.calc_PSNR(visuals)
+        mean_snr = mean_snr + visualizer.calc_SNR(visuals)
+        mean_psnr_fbp = mean_psnr_fbp + visualizer.calc_PSNR_fbp(visuals)
+        mean_snr_fbp = mean_snr_fbp + visualizer.calc_SNR_fbp(visuals)
     mean_psnr = mean_psnr/len(data_loader)
-    print('The mean PSNR is {}'.format(mean_psnr))
+    mean_snr = mean_snr/len(data_loader)
+    mean_psnr_fbp = mean_psnr_fbp/len(data_loader)
+    mean_snr_fbp = mean_snr_fbp/len(data_loader)
+    print('The mean PSNR, SNR on {} data is {:.2f}, {:.2f}'.format(opt.phase,mean_psnr, mean_snr))
+#    print('The mean SNR is {}\n'.format(mean_snr))
+    print('The mean PSNR, SNR on {} data with FBP is {:.2f}, {:.2f}\n'.format(opt.phase, mean_psnr_fbp, mean_snr_fbp))
+#    print('The mean SNR with FBP is {}\n'.format(mean_snr_fbp))
     webpage.save()

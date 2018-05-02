@@ -12,7 +12,7 @@ import os
 import os.path
 
 IMG_EXTENSIONS = [
-    '.jpg', '.JPG', '.jpeg', '.JPEG',
+    '.jpg', '.JPG', '.jpeg', '.JPEG', '.npy',
     '.png', '.PNG', '.ppm', '.PPM', '.bmp', '.BMP',
 ]
 

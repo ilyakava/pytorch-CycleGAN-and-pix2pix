@@ -2,6 +2,8 @@ import os
 import numpy as np
 import cv2
 import argparse
+from tqdm import tqdm
+import pdb
 
 parser = argparse.ArgumentParser('create image pairs')
 parser.add_argument('--fold_A', dest='fold_A', help='input directory for image A', type=str, default='../dataset/50kshoes_edges')
@@ -16,7 +18,7 @@ for arg in vars(args):
 
 splits = os.listdir(args.fold_A)
 
-for sp in splits:
+for sp in ['test','val']:#splits:
     img_fold_A = os.path.join(args.fold_A, sp)
     img_fold_B = os.path.join(args.fold_B, sp)
     img_list = os.listdir(img_fold_A)
@@ -29,7 +31,7 @@ for sp in splits:
     if not os.path.isdir(img_fold_AB):
         os.makedirs(img_fold_AB)
     print('split = %s, number of images = %d' % (sp, num_imgs))
-    for n in range(num_imgs):
+    for n in tqdm(range(num_imgs)):
         name_A = img_list[n]
         path_A = os.path.join(img_fold_A, name_A)
         if args.use_AB:
@@ -44,5 +46,6 @@ for sp in splits:
             path_AB = os.path.join(img_fold_AB, name_AB)
             im_A = cv2.imread(path_A, cv2.IMREAD_GRAYSCALE)
             im_B = cv2.imread(path_B, cv2.IMREAD_GRAYSCALE)
-            im_AB = np.concatenate([im_A, im_B], 1)
-            cv2.imwrite(path_AB, im_AB)
+            if im_A is not None and im_B is not None:
+                im_AB = np.concatenate([im_A, im_B], 1)
+                cv2.imwrite(path_AB, im_AB)

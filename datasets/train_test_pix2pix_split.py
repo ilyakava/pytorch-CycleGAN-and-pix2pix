@@ -6,9 +6,9 @@ import random as r
 
 import pdb
 
-A_SRC_DIR = '/vulcan/scratch/snanduri/iradon/data/ellipsoids_large/50_views/'
-B_SRC_DIR = '/vulcan/scratch/snanduri/iradon/data/ellipsoids_large/png/'
-DEST_DIR = '/vulcan/scratch/snanduri/iradon/data/ellipsoids_large/pix2pix_50_views/'
+A_SRC_DIR = '/vulcan/scratch/snanduri/iradon/data/ellipsoids_large/50_views_merge'
+B_SRC_DIR = '/vulcan/scratch/snanduri/iradon/data/ellipsoids_large/png'
+DEST_DIR = '/vulcan/scratch/snanduri/iradon/data/ellipsoids_large/pix2pix_50_views'
 
 data_root = '/'.join(DEST_DIR.split('/')[:-1])
 
