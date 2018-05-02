@@ -10,14 +10,14 @@ from torch.nn.parameter import Parameter
 import pdb
 
 import pytorch_fft.fft.autograd as torchfft
-fft2d = fft.Fft2d()
-ifft2d = fft.Ifft2d()
+fft2d = torchfft.Fft2d()
+ifft2d = torchfft.Ifft2d()
 
 dtype = torch.cuda.FloatTensor
 
 class InvRadonFourierLayer(torch.nn.Module):
     def __init__(self, H_in, W_in, D_out, filter_type='ramp'):
-        super(InvRadonLayer, self).__init__()
+        super(InvRadonFourierLayer, self).__init__()
         self.W_in = W_in
         self.D_out = D_out
         self.H_in = H_in
@@ -55,12 +55,11 @@ class InvRadonFourierLayer(torch.nn.Module):
         self.tG = autograd.Variable(torch.from_numpy(t4dim).type(dtype))
 
     def forward(self, radon_imageG):
-        pdb.set_trace()
-        radon_filteredG = ifft2d(fft2d(radon_imageG) * self.hG)
-        # filter
-        radon_filteredG = F.conv2d(radon_image_paddedG, self.hG)
-        # unpad
-        radon_filteredG = radon_padded_filteredG[:,:,(self.hH_in+1):(self.hH_in+self.H_in+1),:]
+        radon_imageG_i = autograd.Variable(torch.zeros(radon_imageG.size()).type(dtype))
+        radon_imageG_fft_r, radon_imageG_fft_i = fft2d(radon_imageG, radon_imageG_i)
+        radon_imageG_fft_r *= self.hG
+        radon_imageG_fft_i *= self.hG
+        radon_filteredG, _ = ifft2d(radon_imageG_fft_r, radon_imageG_fft_i)
 
         # accumulator
         N_in = radon_imageG.size(0)

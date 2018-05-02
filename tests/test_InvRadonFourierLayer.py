@@ -20,7 +20,7 @@ import torch.autograd as autograd
 import torch.nn.functional as F
 from torch.nn.parameter import Parameter
 
-from models.inv_radon_layer import InvRadonFourierLayer
+from models.inv_radon_fourier_layer import InvRadonFourierLayer
 
 dtype = torch.cuda.FloatTensor
 
