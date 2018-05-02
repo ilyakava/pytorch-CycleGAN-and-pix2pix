@@ -13,7 +13,8 @@ from tqdm import tqdm
 import pdb
 
 DATA_DIR = '/scratch0/public/rsna-bone-age/512/train/'
-OUT_DIR = '/scratch0/public/rsna-bone-age/50_views/'
+# OUT_DIR = '/scratch0/public/rsna-bone-age/50_views/'
+NPY_OUT_DIR = '/scratch0/public/rsna-bone-age/50_views_npys/'
 NANG = 50
 
 ang = np.linspace(0., 180., NANG, endpoint=False)
@@ -21,8 +22,9 @@ ang = np.linspace(0., 180., NANG, endpoint=False)
 for filename in tqdm(os.listdir(DATA_DIR)):
     obj = imread(DATA_DIR + filename, as_grey=True)
     proj = radon(obj, theta=ang, circle=False)
+    np.save(NPY_OUT_DIR + filename, proj)
 
-    rec = iradon(proj, theta=ang, circle=False)
-    im = Image.fromarray(rec).convert('RGB')
-    im.save(OUT_DIR + filename)
+    #rec = iradon(proj, theta=ang, circle=False)
+    #im = Image.fromarray(rec).convert('RGB')
+    #im.save(OUT_DIR + filename)
     
