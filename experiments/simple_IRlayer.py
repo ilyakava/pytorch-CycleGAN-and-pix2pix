@@ -16,6 +16,7 @@ from skimage.io import imread
 import matplotlib.pyplot as plt
 
 import torch
+import torch.nn as nn
 import torch.autograd as autograd
 import torch.nn.functional as F
 from torch.nn.parameter import Parameter
@@ -72,10 +73,12 @@ y = autograd.Variable(torch.from_numpy(ims).type(dtype), requires_grad=False)
 
 # Construct our model by instantiating the class defined above
 if learning_domain == 'time':
-    model = InvRadonLayer(H_in, W_in, D_out)
-    mylr = 4e-14
+    model = nn.Sequential(InvRadonLayer(H_in, W_in, D_out),
+        nn.Sigmoid() )
+    mylr = 1e-7
 elif learning_domain == 'fourier':
-    model = InvRadonFourierLayer(H_in, W_in, D_out)
+    model = nn.Sequential(InvRadonFourierLayer(H_in, W_in, D_out),
+        nn.ReLU() )
     mylr = 1e-11
 else:
     error('invalid learning_domain set')
@@ -92,6 +95,7 @@ for t in range(500):
 
     # Compute and print loss
     loss = criterion(y_pred, y)
+    loss = loss / int(np.prod(y_pred.size()))
     losses.append(loss.data[0])
     if t > -1:
         while len(last_itr_visuals) > 0:
