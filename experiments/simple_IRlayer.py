@@ -84,9 +84,9 @@ y = autograd.Variable(torch.from_numpy(ims).type(dtype), requires_grad=False)
 
 # Construct our model by instantiating the class defined above
 if learning_domain == 'time':
-    model = nn.Sequential(InvRadonLayer(H_in, W_in, D_out, 'ramp'),
-        nn.Sigmoid() )
-    mylr = 0
+    model = nn.Sequential(InvRadonLayer(H_in, W_in, D_out, 'rand'),
+        nn.ReLU() )
+    mylr = 1e-9
 elif learning_domain == 'fourier':
     model = nn.Sequential(InvRadonFourierLayer(H_in, W_in, D_out, 'rand'),
         nn.ReLU() )
