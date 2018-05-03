@@ -20,7 +20,7 @@ NANG = 50
 ang = np.linspace(0., 180., NANG, endpoint=False)
 
 for filename in tqdm(os.listdir(DATA_DIR)):
-    obj = imread(DATA_DIR + filename, as_grey=True) / 255.0
+    obj = imread(DATA_DIR + filename) / 255.0
     proj = radon(obj, theta=ang, circle=False)
     np.save(NPY_OUT_DIR + filename, proj)
 

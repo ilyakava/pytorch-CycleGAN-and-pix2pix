@@ -6,9 +6,9 @@ import random as r
 
 import pdb
 
-A_SRC_DIR = '/scratch0/public/ellipsoids/pix2pix_premerge/A'
-C_DEST_DIR = '/scratch0/public/ellipsoids/pix2pix_premerge/C'
-C_SRC_DIR = '/scratch0/public/ellipsoids/50_views_npys_fixed'
+A_SRC_DIR = '/scratch0/public/siim-medical-images/pix2pix_premerge/A'
+C_DEST_DIR = '/scratch0/public/siim-medical-images/pix2pix_premerge/C'
+C_SRC_DIR = '/scratch0/public/siim-medical-images/50_views_npys_fixed'
 
 train = os.listdir('%s/train' % A_SRC_DIR)
 val = os.listdir('%s/val' % A_SRC_DIR)
